@@ -10,6 +10,8 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
 from email import encoders
+
+import sys
 # --------------------------------------------------------------------------------
 # encrypt
 # https://stackoverflow.com/questions/39509741/python-or-libreoffice-save-xlsx-file-encrypted-with-password
@@ -42,7 +44,8 @@ def set_password(excel_file_path, pw):
     """
 
     # write
-    vbs_script_path = excel_file_path.parent.joinpath("set_pw.vbs")
+    vbs_script_path = excel_file_path.parent.joinpath(
+        excel_file_path.stem + "set_pw.vbs")
     with open(vbs_script_path, "w") as file:
         file.write(vbs_script)
 
@@ -96,47 +99,26 @@ def sendExcelByMail():
 # --------------------------------------------------------------------------------
 
 
-def loadJSON(filename):
-    json_file = codecs.open(filename, 'r', encoding='utf-8')
-    json_data = json.loads(json_file.read())
-    json_file.close()
-    return json_data
-
-# --------------------------------------------------------------------------------
-
-
-# 讀取人員設定表
-config = loadJSON('config.json')
-
-# 讀取excel
+argvs = sys.argv[1:]
+print(argvs)
+code = argvs[0]
+name = argvs[1]
+pwd = argvs[2]
+email = argvs[3]
+target_row = int(argvs[4])
+print("main2:", code, name, pwd, email)
 input_file = os.path.join(os.getcwd(), 'test.xlsx')
-wb = openpyxl.load_workbook(input_file)
-ws = wb.worksheets[0]
-
-# 資料起始列為3,1:日期列, 2:標題列
-for ri in range(3, 30):
-    value = ws.cell(ri, 3).value
-    if value in config:
-        employee = config[value]
-        code = value
-        name = employee['name']
-        pwd = employee['id']
-        email = employee['email']
-        subprocess.call(['python', 'main2.py', code, name, pwd, email, str(ri)])
-        # input_file = os.path.join(os.getcwd(), 'test.xlsx')
-        # wb2 = openpyxl.load_workbook(input_file)
-        # ws2 = wb2.worksheets[0]
-        # for ws2_ri in range(30, 2, -1):
-        #     if ws2_ri != ri:
-        #         ws2.delete_rows(ws2_ri)  # 1-base
-        # # wb2 = openpyxl.Workbook()
-        # # ws2 = wb2.active
-        # # ws2.append(ws[1])
-        # # ws2.append(ws[2])
-        # # ws2.append(ws[ri])
-        # # ws.delete_rows(3)  # 1-base
-        # output_file = os.path.join(os.getcwd(), code + '.xlsx')
-        # wb2.save(output_file)
-        # set_password(output_file, pwd)
-
-print('done!')
+wb2 = openpyxl.load_workbook(input_file)
+ws2 = wb2.worksheets[0]
+for ws2_ri in range(30, 2, -1):
+    if ws2_ri != target_row:
+        ws2.delete_rows(ws2_ri)  # 1-base
+# wb2 = openpyxl.Workbook()
+# ws2 = wb2.active
+# ws2.append(ws[1])
+# ws2.append(ws[2])
+# ws2.append(ws[ri])
+# ws.delete_rows(3)  # 1-base
+output_file = os.path.join(os.getcwd(), code + '.xlsx')
+wb2.save(output_file)
+set_password(output_file, pwd)
