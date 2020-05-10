@@ -6,6 +6,7 @@ import codecs  # 檔案
 import json  # JSON
 import subprocess  # 子進程
 import sys
+import zipfile
 import smtplib  # email
 from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
@@ -19,6 +20,18 @@ from email import encoders
 # https://www.runoob.com/python/python-email.html
 # SMTP(Simple Mail Transfer Protocol)
 # --------------------------------------------------------------------------------
+
+# zip加密
+
+
+def set_password2(excel_file_path, pw):
+    zipPath = excel_file_path.replace('xlsx', 'zip')
+    newZip = zipfile.ZipFile(zipPath, 'w')
+    newZip.write(excel_file_path, compress_type=zipfile.ZIP_DEFLATED)
+    newZip.setpassword(bytes(pw, 'ascii'))
+    newZip.close()
+
+# vbs加密
 
 
 def set_password(excel_file_path, pw):
@@ -115,23 +128,31 @@ config = loadJSON('config.json')
 sender_account = config['Sender']['Account']
 sender_pwd = config['Sender']['pwd']
 
+tmp_dir = os.path.join(os.getcwd(), 'tmp')
+if os.path.isdir(tmp_dir):
+    shutil.rmtree(tmp_dir)
+
 # 讀取excel
 # input_file = os.path.join(os.getcwd(), 'test.xlsx')
-input_file = sys.argv[1]
-print(input_file)
+
+if len(sys.argv) == 1:
+    input_file = input('請將薪資表拖曳至視窗內:')
+else:
+    input_file = sys.argv[1]
+
+print('開始拆分薪資表...' + input_file)
+
 wb = openpyxl.load_workbook(input_file)
 ws = wb.worksheets[0]  # 取第一張表
 
 # 建立暫存資料夾--------------------------------------------------------------------------------
-tmp_dir = os.path.join(os.getcwd(), 'tmp')
-if os.path.isdir(tmp_dir):
-    shutil.rmtree(tmp_dir)
+
 os.mkdir(tmp_dir)
 
 tmp_files = []
 
 # 薪資拆分--------------------------------------------------------------------------------
-print('開始拆分薪資表...')
+
 # 資料起始列為3,1:日期列, 2:標題列
 for ri in range(3, ws.max_row):  # 薪資表從第3列跑到第N列
     value = ws.cell(ri, 3).value  # 取得人名
@@ -151,7 +172,6 @@ for ri in range(3, ws.max_row):  # 薪資表從第3列跑到第N列
         wb2.save(output_file)
         tmp_files.append(output_file)
     else:
-        input('config不存在 ' + str(value))
         break
 
 print('拆分完成!')
@@ -163,6 +183,7 @@ for i in range(len(tmp_files)):
     pwd_file = tmp_files[i]
     value = os.path.basename(pwd_file).split('.')[0]
     employee = config[value]
+    print('加密 ' + str(value))
     set_password(pwd_file, employee['id'])
 print('加密完成!')
 
@@ -175,4 +196,4 @@ for i in range(len(tmp_files)):
     print('發送email ' + str(value))
     sendExcelByMail(subject, email_file, employee['email'])
 shutil.rmtree(tmp_dir)
-print('done!')
+print('Done!')
