@@ -31,10 +31,10 @@ def set_password(excel_file_path, pw):
         f"""' Save with password required upon opening
 
     Set excel_object = CreateObject("Excel.Application")
-    Set workbook = excel_object.Workbooks.Open("{excel_file_path}")
-
     excel_object.DisplayAlerts = False
     excel_object.Visible = False
+
+    Set workbook = excel_object.Workbooks.Open("{excel_file_path}")
 
     workbook.SaveAs "{excel_file_path}",, "{pw}"
 
@@ -99,7 +99,11 @@ def sendExcelByMail(subject, file, receiver):
 
 def loadJSON(filename):
     json_file = codecs.open(filename, 'r', encoding='utf-8')
-    json_data = json.loads(json_file.read())
+    try:
+        json_data = json.loads(json_file.read())
+    except:
+        input(filename + ' 解析失敗')
+
     json_file.close()
     return json_data
 
@@ -116,7 +120,7 @@ sender_pwd = config['Sender']['pwd']
 input_file = sys.argv[1]
 print(input_file)
 wb = openpyxl.load_workbook(input_file)
-ws = wb.worksheets[0]
+ws = wb.worksheets[0]  # 取第一張表
 
 # 建立暫存資料夾--------------------------------------------------------------------------------
 tmp_dir = os.path.join(os.getcwd(), 'tmp')
@@ -129,29 +133,25 @@ tmp_files = []
 # 薪資拆分--------------------------------------------------------------------------------
 print('開始拆分薪資表...')
 # 資料起始列為3,1:日期列, 2:標題列
-for ri in range(3, 30):
-    value = ws.cell(ri, 3).value
+for ri in range(3, ws.max_row):  # 薪資表從第3列跑到第N列
+    value = ws.cell(ri, 3).value  # 取得人名
     if value in config:
+        print("開始拆分 " + value)
         employee = config[value]
         code = value
         name = employee['name']
         pwd = employee['id']
         email = employee['email']
-        wb2 = openpyxl.load_workbook(input_file)
-        ws2 = wb2.worksheets[0]
-        for ws2_ri in range(30, 2, -1):
-            if ws2_ri != ri:
-                ws2.delete_rows(ws2_ri)  # 1-base
-        # wb2 = openpyxl.Workbook()
-        # ws2 = wb2.active
-        # ws2.append(ws[1])
-        # ws2.append(ws[2])
-        # ws2.append(ws[ri])
-        # ws.delete_rows(3)  # 1-base
+        wb2 = openpyxl.load_workbook(input_file)  # 開啟副本
+        ws2 = wb2.worksheets[0]  # 取第一張表
+        ws2.move_range("A" + str(ri) + ":AZ" + str(ri), rows=-(ri-3),
+                       cols=0, translate=True)  # 移動目標列到第3列
+        ws2.delete_rows(4, ws.max_row)  # 刪除多餘列
         output_file = os.path.join(tmp_dir, code + '.xlsx')
         wb2.save(output_file)
         tmp_files.append(output_file)
-        #set_password(output_file, pwd)
+    else:
+        input('config不存在 ' + str(value))
         break
 
 print('拆分完成!')
@@ -172,6 +172,7 @@ for i in range(len(tmp_files)):
     email_file = tmp_files[i]
     value = os.path.basename(email_file).split('.')[0]
     employee = config[value]
+    print('發送email ' + str(value))
     sendExcelByMail(subject, email_file, employee['email'])
 shutil.rmtree(tmp_dir)
 print('done!')
