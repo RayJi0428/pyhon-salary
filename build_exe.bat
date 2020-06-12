@@ -1,1 +1,1 @@
-pyinstaller -i icon.ico -F .\main.py
+pyinstaller -F .\main.py

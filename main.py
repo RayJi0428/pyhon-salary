@@ -122,7 +122,7 @@ def loadJSON(filename):
 
 # --------------------------------------------------------------------------------
 
-
+print('ver 6.12.0')
 # 讀取人員設定表
 config = loadJSON('config.json')
 sender_account = config['Sender']['Account']
@@ -132,14 +132,11 @@ tmp_dir = os.path.join(os.getcwd(), 'tmp')
 if os.path.isdir(tmp_dir):
     shutil.rmtree(tmp_dir)
 
-# 讀取excel
-# input_file = os.path.join(os.getcwd(), 'test.xlsx')
-
 if len(sys.argv) == 1:
     input_file = input('請將薪資表拖曳至視窗內:')
 else:
     input_file = sys.argv[1]
-
+#input_file = os.path.join(os.getcwd(), 'test.xlsx')
 print('開始拆分薪資表...' + input_file)
 
 wb = openpyxl.load_workbook(input_file)
@@ -153,8 +150,9 @@ tmp_files = []
 
 # 薪資拆分--------------------------------------------------------------------------------
 
+print("ws.max_row = " + str(ws.max_row))
 # 資料起始列為3,1:日期列, 2:標題列
-for ri in range(3, ws.max_row):  # 薪資表從第3列跑到第N列
+for ri in range(3, ws.max_row+1):  # 薪資表從第3列跑到第N列
     value = ws.cell(ri, 3).value  # 取得人名
     if value in config:
         print("開始拆分 " + value)
@@ -172,6 +170,7 @@ for ri in range(3, ws.max_row):  # 薪資表從第3列跑到第N列
         wb2.save(output_file)
         tmp_files.append(output_file)
     else:
+        print("找不到 " + value)
         break
 
 print('拆分完成!')
